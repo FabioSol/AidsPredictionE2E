@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - ../data/postgres:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  spark:
+    build:
+      context: ..
+      dockerfile: docker/spark/Dockerfile
+    environment:
+      - SPARK_MODE=master
+    ports:
+      - "8081:8081"
+
+  spark-worker:
+    build:
+      context: ..
+      dockerfile: docker/spark/Dockerfile
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark:7077
+    ports:
+      - "8082:8082"
+    depends_on:
+      - spark
+
+  airflow:
+    build:
+      context: ..
+      dockerfile: docker/airflow/Dockerfile
+    environment:
+      - LOAD_EX=n
+      - EXECUTOR=Local
+      - AIRFLOW_USER=${AIRFLOW_USER}
+      - AIRFLOW_FIRSTNAME=${AIRFLOW_FIRSTNAME}
+      - AIRFLOW_LASTNAME=${AIRFLOW_LASTNAME}
+      - AIRFLOW_ROLE=${AIRFLOW_ROLE}
+      - AIRFLOW_EMAIL=${AIRFLOW_EMAIL}
+      - AIRFLOW_PASSWORD=${AIRFLOW_PASSWORD}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../dags:/usr/local/airflow/dags
+      - ../scripts:/usr/local/airflow/scripts
+      - ../config:/usr/local/airflow/config
+      - ../models:/usr/local/airflow/models
+      - ../data:/usr/local/airflow/data
+    entrypoint: >
+      bash -c "
+            airflow db init && \
+            airflow users create --username ${AIRFLOW_USER} --firstname ${AIRFLOW_FIRSTNAME} --lastname ${AIRFLOW_LASTNAME} --role ${AIRFLOW_ROLE} --email ${AIRFLOW_EMAIL} --password ${AIRFLOW_PASSWORD} && \
+            airflow webserver
+            "
+    depends_on:
+      - spark
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/api/Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      - airflow
+      - spark
+
