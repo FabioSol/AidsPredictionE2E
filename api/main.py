@@ -29,10 +29,8 @@ class PredictionRequest(BaseModel):
     cd420: int
     cd80: int
     cd820: int
-#@app.on_event("startup")
-#def load_model():
-#    global model
-#    model = joblib.load('models/model.pkl')
+
+
 
 @app.post("/predict")
 def predict(request: PredictionRequest):

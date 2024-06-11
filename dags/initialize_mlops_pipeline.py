@@ -1,10 +1,7 @@
 from airflow import DAG
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
-from airflow.operators.python import PythonOperator
 from datetime import datetime, timedelta
 from airflow.utils.dates import days_ago
-from scripts.data_split import split_data
-from scripts.baseline_model import set_baseline
 
 default_args = {
     'owner': 'airflow',
